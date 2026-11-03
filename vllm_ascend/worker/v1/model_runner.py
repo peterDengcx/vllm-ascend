@@ -35,6 +35,7 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 from vllm import envs
+from vllm_ascend import envs as ascend_envs
 from vllm._aiter_ops import rocm_aiter_ops
 from vllm.compilation import breakable_cudagraph
 from vllm.compilation.cuda_graph import CUDAGraphStat
@@ -1597,7 +1598,8 @@ class NPUModelRunner(GPUModelRunner):
         # Sync num_accepted_tokens from CPU (set by
         # _update_states_after_model_execute for hybrid models).
         if self.num_accepted_tokens_event is not None:
-            self.num_accepted_tokens_event.synchronize()
+            with record_function_or_nullcontext("mtp_gap.accepted_tokens_event_wait"):
+                self.num_accepted_tokens_event.synchronize()
             self._sync_num_accepted_tokens(
                 num_reqs, has_prev_mapping=bool(prev_req_id_to_index)
             )
@@ -1982,7 +1984,8 @@ class NPUModelRunner(GPUModelRunner):
         """
         assert self.valid_sampled_token_count_event is not None
         assert self.valid_sampled_token_count_cpu is not None
-        self.valid_sampled_token_count_event.synchronize()
+        with record_function_or_nullcontext("mtp_gap.valid_count_event_wait"):
+            self.valid_sampled_token_count_event.synchronize()
         correct_optimistic_seq_lens_cpu(
             self.optimistic_seq_lens_cpu.numpy(),
             self.prev_positions.np,
@@ -2980,6 +2983,17 @@ class NPUModelRunner(GPUModelRunner):
                 and not self.use_async_scheduling
                 and use_padded_batch
             )
+            # Experimental async PP1 MTP overlap; default ordering is unchanged.
+            early_async_mtp = (
+                ascend_envs.VLLM_ASCEND_EXPERIMENT_MTP_EARLY_DRAFT
+                and self.speculative_config.method == "mtp"
+                and self.use_async_scheduling
+                and get_pp_group().world_size == 1
+                and use_padded_batch
+                and not scheduler_output.has_structured_output_requests
+                and not self.input_batch.sampling_metadata.output_token_ids
+            )
+            early_pp_padded_drafter = early_pp_padded_drafter or early_async_mtp
             if early_pp_padded_drafter:
                 self._draft_token_ids = None
                 self._draft_token_req_ids = None

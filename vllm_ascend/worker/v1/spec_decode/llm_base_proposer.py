@@ -42,6 +42,7 @@ from vllm.v1.spec_decode.utils import (
 )
 from vllm.v1.worker.gpu_input_batch import CachedRequestState, InputBatch
 
+from vllm_ascend import envs as ascend_envs
 from vllm_ascend.ascend_config import get_ascend_config
 from vllm_ascend.ascend_forward_context import _EXTRA_CTX, set_ascend_forward_context
 from vllm_ascend.attention.attention_v1 import AscendAttentionState
@@ -1648,7 +1649,13 @@ class AscendSpecDecodeBaseProposer(SpecDecodeBaseProposer):
             batch_size = draft_token_ids.shape[0]
 
         # Generate the remaining draft tokens.
-        draft_token_ids_tensor = torch.zeros(
+        # Rows are written before use. Keep zero initialization by default.
+        allocate_draft_buffer = (
+            torch.empty
+            if self.method == "mtp" and ascend_envs.VLLM_ASCEND_EXPERIMENT_MTP_EMPTY_BUFFER
+            else torch.zeros
+        )
+        draft_token_ids_tensor = allocate_draft_buffer(
             (self.num_speculative_tokens, *draft_token_ids.shape), dtype=draft_token_ids.dtype, device=self.device
         )
         draft_token_ids_tensor[0] = draft_token_ids

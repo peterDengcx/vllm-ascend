@@ -67,6 +67,10 @@ env_variables: dict[str, Callable[[], Any]] = {
     # In this case, developers need to set this value to "0.9.0" to make sure
     # that the correct package is installed.
     "VLLM_VERSION": lambda: os.getenv("VLLM_VERSION", None),
+    # Experimental V1 MTP early drafting; 0 disables, 1 enables. Not sensitive.
+    "VLLM_ASCEND_EXPERIMENT_MTP_EARLY_DRAFT": lambda: bool(int(os.getenv("VLLM_ASCEND_EXPERIMENT_MTP_EARLY_DRAFT", "0"))),
+    # Experimental V1 MTP uninitialized draft buffer; 0 disables, 1 enables. Not sensitive.
+    "VLLM_ASCEND_EXPERIMENT_MTP_EMPTY_BUFFER": lambda: bool(int(os.getenv("VLLM_ASCEND_EXPERIMENT_MTP_EMPTY_BUFFER", "0"))),
     # Whether to anbale dynamic EPLB
     "DYNAMIC_EPLB": lambda: os.getenv("DYNAMIC_EPLB", "false").lower(),
     # Control the aclrtMemcpyBatchAsync compile path for KV cache offloading.
