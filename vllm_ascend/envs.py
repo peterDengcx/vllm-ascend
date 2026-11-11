@@ -71,6 +71,8 @@ env_variables: dict[str, Callable[[], Any]] = {
     "VLLM_ASCEND_EXPERIMENT_MTP_EARLY_DRAFT": lambda: bool(int(os.getenv("VLLM_ASCEND_EXPERIMENT_MTP_EARLY_DRAFT", "0"))),
     # Experimental V1 MTP uninitialized draft buffer; 0 disables, 1 enables. Not sensitive.
     "VLLM_ASCEND_EXPERIMENT_MTP_EMPTY_BUFFER": lambda: bool(int(os.getenv("VLLM_ASCEND_EXPERIMENT_MTP_EMPTY_BUFFER", "0"))),
+    # Experimental V2 greedy MTP verification; 0 disables, 1 enables. Not sensitive.
+    "VLLM_ASCEND_EXPERIMENT_GREEDY_VERIFY": lambda: bool(int(os.getenv("VLLM_ASCEND_EXPERIMENT_GREEDY_VERIFY", "0"))),
     # Whether to anbale dynamic EPLB
     "DYNAMIC_EPLB": lambda: os.getenv("DYNAMIC_EPLB", "false").lower(),
     # Control the aclrtMemcpyBatchAsync compile path for KV cache offloading.
